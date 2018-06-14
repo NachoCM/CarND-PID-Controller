@@ -35,15 +35,16 @@ int main(int argc, char *argv[])
   PID steer_pid;
   PID throttle_pid;
   // TODO: Initialize the pid variable.
-  double steer_Kp=atof(argv[1]);//-0.5;
-  double steer_Ki=atof(argv[2]);//0;
-  double steer_Kd=atof(argv[3]);//-0.7;
-  double throttle_Kp=atof(argv[4]);//-0.5;
-  double throttle_Ki=atof(argv[5]);//0;
-  double throttle_Kd=atof(argv[6]);//-0.7;
+  double steer_Kp=atof(argv[1]);
+  double steer_Ki=0;
+  double steer_Kd=atof(argv[2]);
+  double throttle_Kp=atof(argv[3]);
+  double throttle_Ki=0;
+  double throttle_Kd=atof(argv[4]);
+  double base_throttle=atof(argv[5]);
   steer_pid.Init(steer_Kp,steer_Ki,steer_Kd);
   throttle_pid.Init(throttle_Kp,throttle_Ki,throttle_Kd);
-  h.onMessage([&steer_pid,&throttle_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&steer_pid,&throttle_pid,base_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -70,7 +71,10 @@ int main(int argc, char *argv[])
           steer_value=steer_pid.TotalError();
           
           throttle_pid.UpdateError(abs(cte));
-          throttle_value=1+throttle_pid.TotalError();
+          throttle_value=base_throttle+throttle_pid.TotalError();
+          //Avoids the car stopping when it goes off-center while driving slow
+          if (speed<10)
+            throttle_value=fmax(throttle_value,0.3);
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
